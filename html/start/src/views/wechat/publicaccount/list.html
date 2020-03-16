@@ -1,0 +1,176 @@
+
+
+<title>微信公众号</title>
+  
+<div class="layui-card layadmin-header">
+  <div class="layui-breadcrumb" lay-filter="breadcrumb">
+    <a lay-href="">主页</a>
+    <a><cite>微信</cite></a>
+    <a><cite>公众号</cite></a>
+  </div>
+</div>
+
+<div class="layui-fluid">
+  <div class="layui-card">
+    <div class="layui-form layui-card-header layuiadmin-card-header-auto" lay-filter="layadmin-userfront-formlist">
+      <div class="layui-form-item">
+        <div class="layui-inline">
+          <label class="layui-form-label">ID</label>
+          <div class="layui-input-block">
+            <input type="text" name="id" placeholder="请输入" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">用户名</label>
+          <div class="layui-input-block">
+            <input type="text" name="username" placeholder="请输入" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">邮箱</label>
+          <div class="layui-input-block">
+            <input type="text" name="email" placeholder="请输入" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">性别</label>
+          <div class="layui-input-block">
+            <select name="sex">
+              <option value="0">不限</option>
+              <option value="1">男</option>
+              <option value="2">女</option>
+            </select>
+          </div>
+        </div>
+        <div class="layui-inline">
+          <button class="layui-btn layuiadmin-btn-useradmin" lay-submit lay-filter="LAY-user-front-search">
+            <i class="layui-icon layui-icon-search layuiadmin-button-btn"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="layui-card-body">
+      <div style="padding-bottom: 10px;">
+        <button class="layui-btn layuiadmin-btn-useradmin" data-type="batchdel">删除</button>
+        <button class="layui-btn layuiadmin-btn-useradmin" data-type="add">添加</button>
+      </div>
+      
+      <table id="LAY-publicaccount-list" lay-filter="LAY-publicaccount-list"></table>
+      <script type="text/html" id="imgTpl"> 
+        <img style="display: inline-block; width: 50%; height: 100%;" src= {{ d.avatar }}>
+      </script> 
+      <script type="text/html" id="table-wechat-publicaccount">
+        <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>编辑</a>
+        <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon layui-icon-delete"></i>删除</a>
+      </script>
+    </div>
+  </div>
+</div>
+
+<script>
+layui.use('wechat', layui.factory('wechat')).use(['admin', 'wechat', 'table'], function(){
+  var $ = layui.$
+  ,setter = layui.setter
+  ,admin = layui.admin
+  ,view = layui.view
+  ,table = layui.table
+  ,form = layui.form;
+  
+  form.render(null, 'layadmin-userfront-formlist');
+  
+  //监听搜索
+  form.on('submit(LAY-user-front-search)', function(data){
+    var field = data.field;
+    
+    //执行重载
+    table.reload('LAY-publicaccount-list', {
+      where: field
+    });
+  });
+
+  //事件
+  var active = {
+    batchdel: function(){
+      var checkStatus = table.checkStatus('LAY-publicaccount-list')
+      ,checkData = checkStatus.data; //得到选中的数据
+
+      if(checkData.length === 0){
+        return layer.msg('请选择数据');
+      }
+      
+      layer.prompt({
+        formType: 1
+        ,title: '敏感操作，请验证口令'
+      }, function(value, index){
+        layer.close(index);
+        
+        layer.confirm('确定删除吗？', function(index) {
+          
+          //执行 Ajax 后重载
+          /*
+          admin.req({
+            url: 'xxx'
+            //,……
+          });
+          */
+          table.reload('LAY-publicaccount-list');
+          layer.msg('已删除');
+        });
+      });
+    }
+    ,add: function(){
+      admin.popup({
+        title: '添加公众号'
+        ,area: ['500px', '450px']
+        ,id: 'LAY-popup-publicaccount-add'
+        ,success: function(layero, index){
+          view(this.id).render('wechat/publicaccount/publicaccountform').done(function(){
+            form.render(null, 'layuiadmin-form-publicaccount');
+            //监听提交
+            form.on('submit(LAY-publicaccount-front-submit)', function(data){
+              var field = data.field; //获取提交的字段
+			  var local=layui.data(setter.tableName);
+			  field.userid=local['userid'];
+			  $.ajax({
+			  	url:'http://127.0.0.1:5001/api/publicaccount',
+			  	type:'POST',
+			  	data:JSON.stringify(field),
+			  	contentType:'application/json',
+			  	xhrFields: {withCredentials: false},
+			  	success:function(res){
+					var ret=JSON.parse(res);
+					if(ret.code==-1){
+						layer.msg('公众号添加失败', {
+						  offset: '15px'
+						  ,icon: 1
+						  ,time: 1000
+						}, function(){
+						  layer.close(index); //执行关闭 
+						});
+						return false;
+					}
+			  		layer.msg('公众号添加成功', {
+			  		  offset: '15px'
+			  		  ,icon: 1
+			  		  ,time: 1000
+			  		}, function(){
+					  layui.table.reload('LAY-publicaccount-list'); //重载表格
+					  layer.close(index); //执行关闭 
+			  		});
+					return true;
+			  	}
+			  });
+            });
+          });
+        }
+      });
+    }
+  };
+  
+  $('.layui-btn.layuiadmin-btn-useradmin').on('click', function(){
+    var type = $(this).data('type');
+    active[type] ? active[type].call(this) : '';
+  });
+});
+</script>
